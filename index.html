@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitch Viewer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+
+    #status {
+      cursor: pointer;
+      color: blue;
+      text-decoration: underline;
+    }
+
+    #details {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Twitch Viewer</h1>
+  <p id="status"></p>
+  <div id="details"></div>
+
+  <script>
+    const streamers = ["ESL_SC2", "OgamingSC2", "cretetion", "freecodecamp", "storbeck", "habathcx", "RobotCaleb", "noobs2ninjas"];
+const apiUrl = 'https://twitch-proxy.freecodecamp.rocks/helix/';
+
+function fetchAllStreamersStatus() {
+  // Verwende Promise.all, um alle Anfragen parallel auszuführen
+  const requests = streamers.map(streamer => fetch(apiUrl + `users?login=${streamer}`).then(response => response.json()));
+
+  Promise.all(requests)
+    .then(userDataArray => {
+      console.log('UserDataArray:', userDataArray);
+      fetchStreamStatusForUsers(userDataArray);
+    })
+    .catch(error => console.error('Error fetching streamers status:', error));
+}
+
+function fetchStreamStatusForUsers(userDataArray) {
+  // Verwende die erhaltenen Benutzerdaten, um den Status abzurufen
+  const requests = userDataArray.map(userData => {
+    if (userData.data.length > 0) {
+      const userId = userData.data[0].id;
+      return fetch(apiUrl + `streams?user_id=${userId}`).then(response => response.json());
+    }
+    return null;
+  });
+
+  Promise.all(requests)
+    .then(streamDataArray => displayAllStatus(userDataArray, streamDataArray))
+    .catch(error => console.error('Error fetching streamers status:', error));
+}
+
+function displayAllStatus(userDataArray, streamDataArray) {
+  // Iteriere über die Ergebnisse und zeige den Status für jeden Streamer an
+  userDataArray.forEach((userData, index) => {
+    const streamer = streamers[index];
+    const statusElement = document.createElement('div');
+    document.body.appendChild(statusElement);
+
+    if (userData.data.length > 0) {
+      const streamData = streamDataArray[index].data.length > 0 ? streamDataArray[index].data[0] : null;
+
+      if (streamData) {
+        statusElement.innerHTML = `
+          <p>${streamer} is currently streaming: ${streamData.game_name}</p>
+          <p>Viewers: ${streamData.viewer_count}</p>
+          <p><a href="https://www.twitch.tv/${streamer}" target="_blank">Watch Now</a></p>
+        `;
+      } else {
+        statusElement.innerHTML = `<p>${streamer} is currently offline</p>`;
+      }
+    } else {
+      statusElement.innerHTML = `<p>${streamer} information not available</p>`;
+    }
+  });
+}
+
+// Rufe den Status aller Streamer auf
+fetchAllStreamersStatus();
+</script>
+</body>
+</html>
